@@ -45,7 +45,7 @@ pip install -r requirements.txt
 Run the script using the following command:
 
 ```
-python script.py
+python main.py
 ```
 
 The script will start translating files in the input folder and upload the translated files to the output folder.
@@ -69,7 +69,7 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-CMD ["python", "script.py"]
+CMD ["python", "main.py"]
 ```
 
 ### 2. Build the Docker image
