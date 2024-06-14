@@ -43,6 +43,3 @@ You can configure the app by setting the following environment variables:
 
 Contributions are welcome! Please open a pull request to contribute to the app.
 
-## License
-
-This app is licensed under the MIT License. See `LICENSE` for details.
