@@ -1,45 +1,82 @@
 # Google Drive File Translator
 =============================
 
-A Python app that translates files from one language to another using the OpenAI API and Google Drive API.
+This project is a Python script that translates files from one language to another using the OpenAI API and Google Drive API. It can be used to automate the translation of files in a Google Drive folder.
 
-## Getting Started
+## Requirements
+------------
 
-### Prerequisites
-
-* Python 3.9+
+* Python 3.7+
 * OpenAI API key
 * Google Drive API credentials
 * Docker (optional)
 
-### Installation
+## Setup
+--------
 
-1. Clone the repository: `git clone https://github.com/BigFatherJesus/AGDT.git`
-2. Install the dependencies: `pip install -r requirements.txt`
-3. Create a `.env` file with your OpenAI API key and Google Drive API credentials:
-OPENAI_API_KEY=your_openai_api_key GOOGLE_DRIVE_CREDENTIALS=your_google_drive_credentials INPUT_FOLDER_ID=your_input_folder_id OUTPUT_FOLDER_ID=your_output_folder_id
+### 1. Create a `.env` file
 
-4. Run the app: `python main.py`
+Create a `.env` file in the root of the project with the following variables:
+OPENAI_API_KEY=your_openai_api_key 
+INPUT_FOLDER_ID=your_input_folder_id 
+OUTPUT_FOLDER_ID=your_output_folder_id 
+SERVICE_ACCOUNT_FILE=credentials.json 
+OUTPUT_LANGUAGE=Dutch # Make sure to use the full name of the language you want it to be translated to
 
-### Dockerization
+Replace `your_openai_api_key` with your actual OpenAI API key, `your_input_folder_id` with the ID of the input folder in Google Drive, `your_output_folder_id` with the ID of the output folder in Google Drive, and `credentials.json` with the path to your Google Drive API credentials file.
 
-1. Build the Docker image: `docker build -t google-drive-file-translator .`
-2. Run the Docker container: `docker run -p 8080:8080 google-drive-file-translator`
+### 2. Install dependencies
 
-## Usage
+Run the following command to install the required dependencies:
+pip install -r requirements.txt
 
-The app will automatically translate files from the input folder to the output folder using the OpenAI API. The translated files will have the same name as the original file but with a `_translated` suffix.
+### 3. Run the script
 
-## Configuration
+Run the script using the following command:
+python script.py
 
-You can configure the app by setting the following environment variables:
+The script will start translating files in the input folder and upload the translated files to the output folder.
 
-* `INPUT_FOLDER_ID`: The ID of the Google Drive folder containing the files to be translated.
-* `OUTPUT_FOLDER_ID`: The ID of the Google Drive folder where the translated files will be saved.
-* `OPENAI_API_KEY`: Your OpenAI API key.
-* `GOOGLE_DRIVE_CREDENTIALS`: Your Google Drive API credentials.
+## Dockerization
+--------------
 
-## Contributing
+To dockerize the script, follow these steps:
 
-Contributions are welcome! Please open a pull request to contribute to the app.
+### 1. Create a `Dockerfile`
+
+Create a `Dockerfile` in the root of the project with the following contents:
+FROM python:3.7-slim
+
+WORKDIR /app
+
+COPY requirements.txt
+
+RUN pip install -r requirements.txt
+
+COPY . .
+
+CMD ["python", "script.py"]
+
+### 2. Build the Docker image
+
+Run the following command to build the Docker image:
+docker build -t google-drive-file-translator
+
+### 3. Run the Docker container
+
+Run the following command to run the Docker container:
+docker run -e OPENAI_API_KEY=your_openai_api_key -e INPUT_FOLDER_ID=your_input_folder_id -e OUTPUT_FOLDER_ID=your_output_folder_id -e SERVICE_ACCOUNT_FILE=credentials.json -e OUTPUT_LANGUAGE=nl google-drive-file-translator
+
+Replace `your_openai_api_key` with your actual OpenAI API key, `your_input_folder_id` with the ID of the input folder in Google Drive, `your_output_folder_id` with the ID of the output folder in Google Drive, and `credentials.json` with the path to your Google Drive API credentials file.
+
+
+## Acknowledgments
+---------------
+
+This project uses the following third-party libraries:
+
+* OpenAI API
+* Google Drive API
+* Python 3.7+
+* Docker
 
