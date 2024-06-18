@@ -35,16 +35,20 @@ def list_files(folder_id, suffix=None):
         pageSize=None, fields="files(id, name, mimeType)").execute()
     items = results.get('files', [])
     return items
-    
+
 def download_file(file_id, file_name):
     """Download a file from Google Drive."""
     request = service.files().get_media(fileId=file_id)
-    fh = io.FileIO(file_name, 'wb')
-    downloader = MediaIoBaseDownload(fh, request)
-    done = False
-    while done is False:
-        status, done = downloader.next_chunk()
-        print("Download %d%%." % int(status.progress() * 100))
+    data_folder = os.path.join(os.getcwd(), "Data")
+    if not os.path.exists(data_folder):
+        os.makedirs(data_folder)
+    file_path = os.path.join(data_folder, file_name)
+    with open(file_path, 'wb') as fh:
+        downloader = MediaIoBaseDownload(fh, request)
+        done = False
+        while done is False:
+            status, done = downloader.next_chunk()
+            print("Download %d%%." % int(status.progress() * 100))
 
 def upload_file(file_name, folder_id):
     """Upload a file to Google Drive."""
@@ -81,8 +85,11 @@ def translate_text(text):
     translated_text = "\n".join(translated_chunks)
     return translated_text
 
-def translate_file(file_path, file_type):
+def translate_file(file_name, file_type):
     """Translate the contents of a text file and return the translated content."""
+    data_folder = os.path.join(os.getcwd(), "Data")
+    file_path = os.path.join(data_folder, file_name)
+
     if file_type == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':  # .docx
         doc = Document(file_path)
         translated_paragraphs = []
@@ -90,45 +97,45 @@ def translate_file(file_path, file_type):
             text = paragraph.text
             translated_text = translate_text(text)
             translated_paragraphs.append(translated_text)
-        
+
         new_doc = Document()
         for paragraph in translated_paragraphs:
             new_doc.add_paragraph(paragraph)
-        
-        file_name, file_extension = os.path.splitext(file_path)
-        new_file_path = f"{file_name}_AT_Translated{file_extension}"
+
+        new_file_name = file_name.replace(".docx", "_AT_Translated.docx")
+        new_file_path = os.path.join(data_folder, new_file_name)
         new_doc.save(new_file_path)
-    
+
     elif file_type == 'application/pdf':  # .pdf
         pdf_reader = PdfFileReader(open(file_path, 'rb'))
         new_pdf = PdfFileWriter()
-        
+
         for page_num in range(pdf_reader.numPages):
             page = pdf_reader.getPage(page_num)
             text = page.extractText()
             translated_text = translate_text(text)
-            
+
             # Create a new page with the translated text
             new_page = canvas.Canvas(new_pdf, pagesize=page.mediaBox.getWidth(), bottomup=0)
             new_page.setFont("Helvetica", 12)
             new_page.drawString(100, 700, translated_text)
             new_page.showPage()
             new_page.save()
-        
-        file_name, file_extension = os.path.splitext(file_path)
-        new_file_path = f"{file_name}_AT_Translated{file_extension}"
+
+        new_file_name = file_name.replace(".pdf", "_AT_Translated.pdf")
+        new_file_path = os.path.join(data_folder, new_file_name)
         with open(new_file_path, 'wb') as out_pdf:
             new_pdf.write(out_pdf)
-    
+
     else:  # .txt and other text-based files
         with open(file_path, 'r', encoding='utf-8') as file:
             text = file.read()
         translated_text = translate_text(text)
-        file_name, file_extension = os.path.splitext(file_path)
-        new_file_path = f"{file_name}_AT_Translated{file_extension}"
+        new_file_name = file_name.replace(".txt", "_AT_Translated.txt")
+        new_file_path = os.path.join(data_folder, new_file_name)
         with open(new_file_path, 'w', encoding='utf-8') as file:
             file.write(translated_text)
-    
+
     return new_file_path
 
 def list_folder_contents(folder_id):
@@ -153,7 +160,7 @@ def main():
     print("Output folder contents:")
     list_folder_contents(output_folder_id)
     print()
-    
+
     processed_files = set()
 
     while True:
@@ -163,23 +170,25 @@ def main():
             if file_id not in processed_files:
                 file_name = file['name']
                 mime_type = file['mimeType']
-                
+
                 # Check if a file with the same name (without the suffix) already exists in the output folder
-                existing_file = list_files(output_folder_id, "_AT_Translated")[0]
-                if existing_file and existing_file['name'].replace("_AT_Translated", "") == file_name:
+                query = f"'{output_folder_id}' in parents and trashed=false and name contains '_AT_Translated'"
+                existing_files = service.files().list(q=query, fields="files(id, name, mimeType)").execute().get('files', [])
+                existing_file = next((f for f in existing_files if f['name'].replace("_AT_Translated", "") == file_name), None)
+                if existing_file:
                     print(f"Skipping {file_name} because a file with the same name already exists in the output folder.")
                     continue
-                
+
                 download_file(file_id, file_name)
-                
+
                 new_file_path = translate_file(file_name, mime_type)
-                
+
                 upload_file(new_file_path, output_folder_id)
-                
+
                 processed_files.add(file_id)
-        
+
         time.sleep(60)  # Wait for 1 minute before checking for new files again
         processed_files.clear()  # Clear the processed_files set to process all files every time
-        
+
 if __name__ == '__main__':
     main()
