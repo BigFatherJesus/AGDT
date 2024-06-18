@@ -50,10 +50,10 @@ def download_file(file_id, file_name):
             status, done = downloader.next_chunk()
             print("Download %d%%." % int(status.progress() * 100))
 
-def upload_file(file_name, folder_id):
-    """Upload a file to Google Drive."""
+def upload_file(file_path, folder_id):
+    file_name = os.path.basename(file_path)
     file_metadata = {'name': file_name, 'parents': [folder_id]}
-    media = MediaFileUpload(file_name, resumable=True)
+    media = MediaFileUpload(file_path, resumable=True)
     file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
     print(f'File ID: {file.get("id")}')
 
@@ -72,7 +72,7 @@ def translate_text(text):
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": f"You are a highly specialized AI trained in translating subtitles to {os.getenv('OUTPUT_LANGUAGE')}. Your proficiency in {os.getenv('OUTPUT_LANGUAGE')} is well above university level, ensuring translations are accurate and nuanced. You will be provided with a sentence in English, German, or another non-{os.getenv('OUTPUT_LANGUAGE')} language, and your task is to translate it into {os.getenv('OUTPUT_LANGUAGE')}. Please adhere to the following guidelines: Accuracy: Ensure the translation is precise and maintains the original meaning. Brevity: The translation should be concise and not significantly longer than the original sentence to fit within subtitle constraints. Formatting: Preserve the formatting and timecodes as provided. Cultural Sensitivity: Be aware of cultural context and idiomatic expressions to make translations natural and appropriate for {os.getenv('OUTPUT_LANGUAGE')} audiences. The translations are intended for national television subtitles, so high quality and appropriateness are essential."},
+                {"role": "system", "content": f"Hey there! You're an expert AI translation model for subtitles in {os.getenv('OUTPUT_LANGUAGE')}. Your job is to translate sentences from other languages into {os.getenv('OUTPUT_LANGUAGE')} with correct grammar, ensuring accuracy, brevity, formatting, and cultural sensitivity for high-quality, appropriate national television subtitles. Provide only the translated text."},
                 {"role": "user", "content": chunk}
             ]
         )
@@ -86,9 +86,15 @@ def translate_text(text):
     return translated_text
 
 def translate_file(file_name, file_type):
-    """Translate the contents of a text file and return the translated content."""
     data_folder = os.path.join(os.getcwd(), "Data")
     file_path = os.path.join(data_folder, file_name)
+    
+    file_path, file_name_only = os.path.split(file_path)
+    file_name_without_extension, file_extension = os.path.splitext(file_name_only)
+
+    # Create the directory if it doesn't exist
+    if not os.path.exists(file_path):
+        os.makedirs(file_path)
 
     if file_type == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':  # .docx
         doc = Document(file_path)
@@ -98,16 +104,18 @@ def translate_file(file_name, file_type):
             translated_text = translate_text(text)
             translated_paragraphs.append(translated_text)
 
+        new_file_name = f"{file_name_without_extension}_AT_Translated{file_extension}"
+        new_file_path = os.path.join(file_path, new_file_name)
         new_doc = Document()
         for paragraph in translated_paragraphs:
             new_doc.add_paragraph(paragraph)
 
-        new_file_name = file_name.replace(".docx", "_AT_Translated.docx")
-        new_file_path = os.path.join(data_folder, new_file_name)
         new_doc.save(new_file_path)
 
     elif file_type == 'application/pdf':  # .pdf
         pdf_reader = PdfFileReader(open(file_path, 'rb'))
+        new_file_name = f"{file_name_without_extension}_AT_Translated{file_extension}"
+        new_file_path = os.path.join(file_path, new_file_name)
         new_pdf = PdfFileWriter()
 
         for page_num in range(pdf_reader.numPages):
@@ -116,25 +124,24 @@ def translate_file(file_name, file_type):
             translated_text = translate_text(text)
 
             # Create a new page with the translated text
-            new_page = canvas.Canvas(new_pdf, pagesize=page.mediaBox.getWidth(), bottomup=0)
+            new_page = canvas.Canvas(new_file_path, pagesize=page.mediaBox.getWidth(), bottomup=0)
             new_page.setFont("Helvetica", 12)
             new_page.drawString(100, 700, translated_text)
             new_page.showPage()
             new_page.save()
 
-        new_file_name = file_name.replace(".pdf", "_AT_Translated.pdf")
-        new_file_path = os.path.join(data_folder, new_file_name)
         with open(new_file_path, 'wb') as out_pdf:
             new_pdf.write(out_pdf)
 
-    else:  # .txt and other text-based files
-        with open(file_path, 'r', encoding='utf-8') as file:
+    else:  # .txt, .srt, etc.
+          with open(os.path.join(file_path, file_name_only), 'r', encoding='utf-8') as file:
             text = file.read()
-        translated_text = translate_text(text)
-        new_file_name = file_name.replace(".txt", "_AT_Translated.txt")
-        new_file_path = os.path.join(data_folder, new_file_name)
-        with open(new_file_path, 'w', encoding='utf-8') as file:
-            file.write(translated_text)
+            translated_text = translate_text(text)
+
+    new_file_name = f"{file_name_without_extension}_AT_Translated{file_extension}"
+    new_file_path = os.path.join(file_path, new_file_name)
+    with open(new_file_path, 'w', encoding='utf-8') as file:
+        file.write(translated_text)
 
     return new_file_path
 
