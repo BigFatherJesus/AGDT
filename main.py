@@ -25,14 +25,17 @@ credentials = service_account.Credentials.from_service_account_file(
 
 service = build('drive', 'v3', credentials=credentials)
 
-def list_files(folder_id):
+def list_files(folder_id, suffix=None):
     """List all files in the specified Google Drive folder."""
+    query = f"'{folder_id}' in parents and trashed=false"
+    if suffix:
+        query += f" and name ends with '{suffix}'"
     results = service.files().list(
-        q=f"'{folder_id}' in parents and trashed=false",
-        pageSize=10, fields="files(id, name, mimeType)").execute()
+        q=query,
+        pageSize=None, fields="files(id, name, mimeType)").execute()
     items = results.get('files', [])
     return items
-
+    
 def download_file(file_id, file_name):
     """Download a file from Google Drive."""
     request = service.files().get_media(fileId=file_id)
@@ -152,14 +155,20 @@ def main():
     print()
     
     processed_files = set()
-    
+
     while True:
         files = list_files(input_folder_id)
         for file in files:
-            if file['id'] not in processed_files:
-                file_id = file['id']
+            file_id = file['id']
+            if file_id not in processed_files:
                 file_name = file['name']
                 mime_type = file['mimeType']
+                
+                # Check if a file with the same name (without the suffix) already exists in the output folder
+                existing_file = list_files(output_folder_id, "_AT_Translated")[0]
+                if existing_file and existing_file['name'].replace("_AT_Translated", "") == file_name:
+                    print(f"Skipping {file_name} because a file with the same name already exists in the output folder.")
+                    continue
                 
                 download_file(file_id, file_name)
                 
@@ -167,9 +176,10 @@ def main():
                 
                 upload_file(new_file_path, output_folder_id)
                 
-                processed_files.add(file['id'])
+                processed_files.add(file_id)
         
         time.sleep(60)  # Wait for 1 minute before checking for new files again
-
+        processed_files.clear()  # Clear the processed_files set to process all files every time
+        
 if __name__ == '__main__':
     main()
