@@ -21,7 +21,7 @@ OPENAI_API_KEY=your_openai_api_key
 INPUT_FOLDER_ID=your_input_folder_id
 OUTPUT_FOLDER_ID=your_output_folder_id
 SERVICE_ACCOUNT_FILE=credentials.json
-OUTPUT_LANGUAGE=desired_language
+SYSTEM_PROMPT=custom system prompt explaining the AI what to do with your files
 ```
 
 **Replace the placeholders:**
@@ -30,7 +30,6 @@ OUTPUT_LANGUAGE=desired_language
 * `your_input_folder_id`: ID of the input folder in Google Drive.
 * `your_output_folder_id`: ID of the output folder in Google Drive.
 * `credentials.json`: Path to your Google Drive API credentials file.
-* `desired_language`: The full name of the language you want the files to be translated to.
 
 ### 2. Install dependencies
 
@@ -94,7 +93,7 @@ Replace the placeholders with your actual values:
 * `your_input_folder_id`: ID of the input folder in Google Drive.
 * `your_output_folder_id`: ID of the output folder in Google Drive.
 * `credentials.json`: Path to your Google Drive API credentials file.
-* `desired_language`: The full name of the language you want the files to be translated to.
+
 
 ## Acknowledgments
 
