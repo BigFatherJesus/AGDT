@@ -5,7 +5,7 @@ This project is a Python script that translates files from one language to anoth
 
 ## Requirements
 
-* Python 3.7+
+* Python
 * OpenAI API key
 * Google Drive API credentials
 * Docker (optional)
